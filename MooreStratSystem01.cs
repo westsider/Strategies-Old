@@ -75,7 +75,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 			else if (State == State.DataLoaded)
 			{				
 				ClearOutputWindow();   
-				MooreTechSwing011 = MooreTechSwing01(shares, 0.005, 70, true, 3, true, 5, 0.2, false, false, false, false, true);
+				MooreTechSwing011 = MooreTechSwing01(shares, swingPct, minBarsToLastSwing, enableHardStop, pctHardStop, 
+					enablePivotStop, pivotStopSwingSize, pivotStopPivotRange, showUpCount, showHardStops, printTradesOnChart, 
+					printTradesSimple, printTradesTolog);
 			}
 		}
 
