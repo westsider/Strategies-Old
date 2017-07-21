@@ -28,7 +28,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 	public class MooreStratSystem01 : Strategy
 	{
 		private MooreTechSwing01 MooreTechSwing011;
-
+		private int 	startTime 	= 700;  // depending onlocal time
+        private int	 	endTime 	= 1300;
+		private int		ninja_Start_Time;
+		private int		ninja_End_Time;
+		
 		protected override void OnStateChange()
 		{
 			if (State == State.SetDefaults)
@@ -50,6 +54,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				RealtimeErrorHandling						= RealtimeErrorHandling.StopCancelClose;
 				StopTargetHandling							= StopTargetHandling.PerEntryExecution;
 				BarsRequiredToTrade							= 20;
+				DisconnectDelaySeconds 						= 120;
 				// Disable this property for performance gains in Strategy Analyzer optimizations
 				// See the Help Guide for additional information
 				IsInstantiatedOnEachOptimizationIteration	= false;
@@ -68,6 +73,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 				printTradesOnChart		= false;		/// 	bool printtradesOn Chart	= false
 				printTradesSimple 		= false;		/// 	bool printTradesSimple 		= false
 				printTradesTolog 		= true;			/// 	bool printTradesTolog 		= true;
+				/// messages
+				sendMail 				= true;
+				sendSMS 				= true;
 			}
 			else if (State == State.Configure)
 			{
@@ -93,26 +101,103 @@ namespace NinjaTrader.NinjaScript.Strategies
 					if (MooreTechSwing011.Signals[0] == 1 )
 						{
 							EnterLong(Convert.ToInt32(shares), "");
+    						string uniCodeArrow = "\u21E7"; 
+							tradeUpdate(tradeType: uniCodeArrow+" Long Entry on "+Instrument.MasterInstrument.Name);
 						}
 				/// short entry
 				if (Position.MarketPosition == MarketPosition.Flat || Position.MarketPosition == MarketPosition.Long)
 					if (MooreTechSwing011.Signals[0] == -1 )
 					{
 						EnterShort(Convert.ToInt32(shares), "");
+						string uniCodeArrow = "\u21E9"; 
+						tradeUpdate(tradeType: uniCodeArrow+" Short Entry on "+Instrument.MasterInstrument.Name);
 					}
 				/// long exit
 				if (MooreTechSwing011.Signals[0] == 2 )
 				{
 					ExitLong(Convert.ToInt32(shares));
+					string uniCodeArrow = "\u23F9"; 
+					tradeUpdate(tradeType: uniCodeArrow+" Long Exit on "+Instrument.MasterInstrument.Name);
 				}
 				/// short exit
 				if (MooreTechSwing011.Signals[0] == -2 )
 				{
 					ExitShort(Convert.ToInt32(shares));
+					string uniCodeArrow = "\u23F9"; 
+					tradeUpdate(tradeType: uniCodeArrow+" Short Exit on "+Instrument.MasterInstrument.Name);
 				}
 			} 
+			
+			sendDailyReport();
+			/// debug mail witnh 1 min
+			//tradeUpdate(tradeType:"Market Close Report for "+Instrument.MasterInstrument.Name);
 		}
 		
+		public void tradeUpdate(string tradeType) {
+			var titleMessage = tradeType;
+			var bodyMessage = tradeType + " occurred on " + Time[0].ToString() +" @ "+Close[0] +"\n";
+			//bodyMessage = bodyMessage +"\n"+titleMessage +"\n"+ bodyMessage;
+			bodyMessage = bodyMessage +"Trade count:  " + SystemPerformance.AllTrades.TradesPerformance.TradesCount.ToString("0");
+			bodyMessage = bodyMessage +"\nNet profit:      " + SystemPerformance.AllTrades.TradesPerformance.NetProfit.ToString("0.0");
+			bodyMessage = bodyMessage +"\nProfit factor:   " + SystemPerformance.AllTrades.TradesPerformance.ProfitFactor.ToString("0.00");
+			bodyMessage = bodyMessage +"\n\n----->   Detailed Report   <-----";
+			bodyMessage = bodyMessage +"\nMax # of consecutive losers is: " + SystemPerformance.AllTrades.TradesPerformance.MaxConsecutiveLoser;
+			bodyMessage = bodyMessage +"\nLargest loss of all trades is:   $" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestLoser.ToString("0.0");
+			bodyMessage = bodyMessage +"\nLargest win of all trades is:    $" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestWinner.ToString("0.0");
+			bodyMessage = bodyMessage +"\nAverage monthly profit is:      $" + SystemPerformance.AllTrades.TradesPerformance.Currency.ProfitPerMonth.ToString("0.0");
+			
+			if (SystemPerformance.AllTrades.WinningTrades.Count != 0) {
+					double winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
+					winPct = winPct * 100;
+					bodyMessage = bodyMessage + "\n" + "Win Percent is:       " + winPct.ToString("0.0")+ "%";
+				}
+			
+			///
+			/// TODO: ROI
+			/// 
+			
+			Print("\n"+titleMessage + "\n" + bodyMessage);
+			///	Send report to mail and text
+						
+				// in order to send mail and SMS, you must delay each call
+				if (IsFirstTickOfBar && State == State.Realtime)
+				  {
+				    // Instead of Thread.Sleep for, create a timer that runs at the desired interval
+				    System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer {Interval = 5000};
+				 
+				    // queue the "after" logic to run when the timer elapses
+				    timer.Tick += delegate
+				    {
+				        timer.Stop(); // make sure to stop the timer to only fire ones (if desired)
+				        Print("Run SMS after: " + DateTime.Now);
+						if( sendSMS )
+						Share("EcoMail", bodyMessage, new object[]{ "3103824522@tmomail.net", titleMessage });
+				        timer.Dispose(); // make sure to dispose of the timer
+				    };
+	 
+				    Print("Run Mail before: " + DateTime.Now);
+					if( sendMail ) 
+				 		Share("EcoMail", bodyMessage, new object[]{ "whansen1@mac.com", titleMessage });
+				    timer.Start(); // start the timer immediately following the "before" logic
+	  			}
+			
+		}
+		
+		/// Daily Report
+		public void sendDailyReport() {
+			/// C0nvert Military Time to Ninja Time
+			ninja_Start_Time = startTime * 100;
+			ninja_End_Time = endTime * 100;
+			
+			if (ToTime(Time[0]) <= ninja_Start_Time ) {
+				tradeUpdate(tradeType:"Market Open Report for "+Instrument.MasterInstrument.Name);
+			}
+			if (ToTime(Time[0]) <= ninja_End_Time ) {
+				tradeUpdate(tradeType:"Market Close Report for "+Instrument.MasterInstrument.Name);
+			}
+		}
+		
+
 		#region Properies
 		
 		///  inputs
@@ -182,6 +267,16 @@ namespace NinjaTrader.NinjaScript.Strategies
 		[NinjaScriptProperty]
 		[Display(Name="Send Trades To log", Order=5, GroupName="Statistics")]
 		public bool printTradesTolog
+		{ get; set; }
+		
+		/// messages		
+		[NinjaScriptProperty]
+		[Display(Name="Send messages to e-mail", Order=1, GroupName="Messages")]
+		public bool sendMail
+		{ get; set; }
+		[NinjaScriptProperty]
+		[Display(Name="Send messages to SMS", Order=2, GroupName="Messages")]
+		public bool sendSMS
 		{ get; set; }
 		
 		#endregion
