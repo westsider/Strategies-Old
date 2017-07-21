@@ -189,10 +189,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 			ninja_Start_Time = startTime * 100;
 			ninja_End_Time = endTime * 100;
 			
-			if (ToTime(Time[0]) <= ninja_Start_Time ) {
+			if (ToTime(Time[0]) == ninja_Start_Time ) {
 				tradeUpdate(tradeType:"Market Open Report for "+Instrument.MasterInstrument.Name);
 			}
-			if (ToTime(Time[0]) <= ninja_End_Time ) {
+			if (ToTime(Time[0]) == ninja_End_Time ) {
 				tradeUpdate(tradeType:"Market Close Report for "+Instrument.MasterInstrument.Name);
 			}
 		}
