@@ -149,31 +149,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 			/// work on close > close 1 = missed decent entry, when bars over lap li || Close[0] >= EntryPrice
 			/// however this is getting weird to get the strat this far out of sync, put this in the indicator!!!!
 			/// figure out why the signal is 1 bar late and enter on bar close unless the price is rising.... possible?
-			if ( MooreTechSwing011.Signals.IsValidDataPoint(1)) {
-					///Draw.Text(this, "testSignal2"+CurrentBar, MooreTechSwing011.Signals[1].ToString(), 0, High[0], Brushes.Cyan);
-				// if long and missed signal was short, go short
-				if (Position.MarketPosition == MarketPosition.Long && MooreTechSwing011.Signals[1] == -1) {
-					/// if short entry benificial go short else exit
-					if (Close[0] >= Close[1] || Close[0] > Low[1] ) {
-						EnterShort(Convert.ToInt32(shares), "");
-					} else {
-						ExitLong(Convert.ToInt32(shares));
-					}
+//			if ( MooreTechSwing011.Signals.IsValidDataPoint(1)) {
+//					///Draw.Text(this, "testSignal2"+CurrentBar, MooreTechSwing011.Signals[1].ToString(), 0, High[0], Brushes.Cyan);
+//				// if long and missed signal was short, go short
+//				if (Position.MarketPosition == MarketPosition.Long && MooreTechSwing011.Signals[1] == -1) {
+//					/// if short entry benificial go short else exit
+//					if (Close[0] >= Close[1] || Close[0] > Low[1] ) {
+//						EnterShort(Convert.ToInt32(shares), "");
+//					} else {
+//						ExitLong(Convert.ToInt32(shares));
+//					}
 					
-				}
-				// if short and missed signal was long, go long
-				if (Position.MarketPosition == MarketPosition.Short && MooreTechSwing011.Signals[1] == 1) {
-					/// if long entry benificial go long else exit
-					if (Close[0] <= Close[1] || Close[0] <= Low[1]  ) {
-						EnterLong(Convert.ToInt32(shares), "");
-					} else {
-						ExitShort(Convert.ToInt32(shares));
-					}
-					
-					
-				}
-				/// TODO only enter if favorable gap else go flat
-			}
+//				}
+//				// if short and missed signal was long, go long
+//				if (Position.MarketPosition == MarketPosition.Short && MooreTechSwing011.Signals[1] == 1) {
+//					/// if long entry benificial go long else exit
+//					if (Close[0] <= Close[1] || Close[0] <= Low[1]  ) {
+//						EnterLong(Convert.ToInt32(shares), "");
+//					} else {
+//						ExitShort(Convert.ToInt32(shares));
+//					}
+//				}
+//				/// TODO only enter if favorable gap else go flat
+//			}
 			
 //	sendDailyReport();	
 		}
