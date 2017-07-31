@@ -26,14 +26,14 @@ using System.IO;
 //This namespace holds Strategies in this folder and is required. Do not change it. 
 namespace NinjaTrader.NinjaScript.Strategies
 {
-	public class MooreStratSystem01 : Strategy
+	public class MooreTechStratSystem02 : Strategy
 	{
 		/// <summary>
 		/// Working Strat Created on 7/20/2017
 		/// [ ]  get Account value, buying power
 		/// [ ]  create auto position sise by Close[0] / ( buying power / numStrategies)
 		/// </summary>
-		private MooreTechSwing01 MooreTechSwing011;
+		private MooreTechSwing02 MooreTechSwing021;
 		private int 	startTime 	= 700;  // depending onlocal time
         private int	 	endTime 	= 1300;
 		private int		ninja_Start_Time;
@@ -45,7 +45,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if (State == State.SetDefaults)
 			{
 				Description									= @"Enter the description for your new custom Strategy here.";
-				Name										= "MooreStrat System 01";
+				Name										= "MooreStrat System 02";
 				Calculate									= Calculate.OnBarClose;
 				EntriesPerDirection							= 1;
 				EntryHandling								= EntryHandling.AllEntries;
@@ -90,7 +90,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			else if (State == State.DataLoaded)
 			{				
 				ClearOutputWindow();   
-				MooreTechSwing011 = MooreTechSwing01(shares, swingPct, minBarsToLastSwing, enableHardStop, pctHardStop, 
+				MooreTechSwing021 = MooreTechSwing02(shares, swingPct, minBarsToLastSwing, enableHardStop, pctHardStop, 
 					enablePivotStop, pivotStopSwingSize, pivotStopPivotRange, showUpCount, showHardStops, printTradesOnChart, 
 					printTradesSimple, printTradesTolog);
 			}
@@ -106,11 +106,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 			/// entry on second bar is cool but if gap past we see no entry
 			
 			/// check data
-			if( MooreTechSwing011.Signals.IsValidDataPoint(0) ) {
+			if( MooreTechSwing021.Signals.IsValidDataPoint(0) ) {
 
 				/// long Entry
 				if (Position.MarketPosition == MarketPosition.Flat || Position.MarketPosition == MarketPosition.Short)
-					if (MooreTechSwing011.Signals[0] == 1 )
+					if (MooreTechSwing021.Signals[0] == 1 )
 						{
 							EnterLong(Convert.ToInt32(shares), "");
     						string uniCodeArrow = "\u21E7"; 
@@ -118,21 +118,21 @@ namespace NinjaTrader.NinjaScript.Strategies
 						}
 				/// short entry
 				if (Position.MarketPosition == MarketPosition.Flat || Position.MarketPosition == MarketPosition.Long)
-					if ( MooreTechSwing011.Signals[0] == -1 )
+					if ( MooreTechSwing021.Signals[0] == -1 )
 					{
 						EnterShort(Convert.ToInt32(shares), "");
 						string uniCodeArrow = "\u21E9"; 
 						tradeUpdate(tradeType: uniCodeArrow+" Short Entry on "+Instrument.MasterInstrument.Name);
 					}
 				/// long exit
-				if (MooreTechSwing011.Signals[0] == 2 )
+				if (MooreTechSwing021.Signals[0] == 2 )
 				{
 					ExitLong(Convert.ToInt32(shares));
 					string uniCodeArrow = "\u23F9"; 
 					tradeUpdate(tradeType: uniCodeArrow+" Long Exit on "+Instrument.MasterInstrument.Name);
 				}
 				/// short exit
-				if (MooreTechSwing011.Signals[0] == -2 )
+				if (MooreTechSwing021.Signals[0] == -2 )
 				{
 					ExitShort(Convert.ToInt32(shares));
 					string uniCodeArrow = "\u23F9"; 
