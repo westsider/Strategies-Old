@@ -98,9 +98,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 		protected override void OnBarUpdate()
 		{
-			if (CurrentBars[0] < 1)
+			if (CurrentBars[0] < 20)
 			return;
-			Draw.TextFixed(this, "tag1", "Strategy is applied to " + Account.Name, TextPosition.BottomLeft);
+			//Draw.TextFixed(this, "tag1", "Strategy is applied to " + Account.Name, TextPosition.BottomLeft);
 			//Print(Account.UpdateCashValue);
 //			Print("Account value = " + AccountItem.TotalCashBalance.ToString());
 			/// entry on second bar is cool but if gap past we see no entry
@@ -113,35 +113,35 @@ namespace NinjaTrader.NinjaScript.Strategies
 					if (MooreTechSwing021.Signals[0] == 1 )
 						{
 							EnterLong(Convert.ToInt32(shares), "");
-    						string uniCodeArrow = "\u21E7"; 
-							tradeUpdate(tradeType: uniCodeArrow+" Long Entry on "+Instrument.MasterInstrument.Name);
+    						//string uniCodeArrow = "\u21E7"; 
+							//tradeUpdate(tradeType: uniCodeArrow+" Long Entry on "+Instrument.MasterInstrument.Name);
 						}
 				/// short entry
 				if (Position.MarketPosition == MarketPosition.Flat || Position.MarketPosition == MarketPosition.Long)
 					if ( MooreTechSwing021.Signals[0] == -1 )
 					{
 						EnterShort(Convert.ToInt32(shares), "");
-						string uniCodeArrow = "\u21E9"; 
-						tradeUpdate(tradeType: uniCodeArrow+" Short Entry on "+Instrument.MasterInstrument.Name);
+						//string uniCodeArrow = "\u21E9"; 
+						//tradeUpdate(tradeType: uniCodeArrow+" Short Entry on "+Instrument.MasterInstrument.Name);
 					}
 				/// long exit
 				if (MooreTechSwing021.Signals[0] == 2 )
 				{
 					ExitLong(Convert.ToInt32(shares));
-					string uniCodeArrow = "\u23F9"; 
-					tradeUpdate(tradeType: uniCodeArrow+" Long Exit on "+Instrument.MasterInstrument.Name);
+					//string uniCodeArrow = "\u23F9"; 
+					//tradeUpdate(tradeType: uniCodeArrow+" Long Exit on "+Instrument.MasterInstrument.Name);
 				}
 				/// short exit
 				if (MooreTechSwing021.Signals[0] == -2 )
 				{
 					ExitShort(Convert.ToInt32(shares));
-					string uniCodeArrow = "\u23F9"; 
-					tradeUpdate(tradeType: uniCodeArrow+" Short Exit on "+Instrument.MasterInstrument.Name);
+					//string uniCodeArrow = "\u23F9"; 
+					//tradeUpdate(tradeType: uniCodeArrow+" Short Exit on "+Instrument.MasterInstrument.Name);
 				}
 				
 				///Draw.Text(this, "testSignal"+CurrentBar, MooreTechSwing011.Signals[0].ToString(), 0, High[0], Brushes.Yellow);
 				
-				
+				Print(MooreTechSwing021.Signals[0]);
 				
 			} 
 			
