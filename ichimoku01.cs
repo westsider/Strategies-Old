@@ -97,8 +97,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 			*/
 			
 			/// add input for syncWithCloud
-			/// add bool for exit @ ConversionLine == Tenkan-sen
-			/// add bool for exit @ BaseLine == Kijun-sen
+			/// add cloud as stop
+			/// 
+			/// must add stop re entry after 1st stpo in this directiom
+			/// add exit @ ConversionLine == Tenkan-sen
+			/// add exit @ BaseLine == Kijun-sen
 			
 			/// Normalise shares for 50K start balance
 			if (Bars.IsFirstBarOfSession)
