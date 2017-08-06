@@ -32,17 +32,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 		public double 	entryPrice;
 		public int 		entryBar;
 		public int 		entryBar2;
-		public int 		shares 		= 100;
-		public bool 	entryOne	 = false;
-		public bool 	entryTwo 	= false;
-		public string ComputerName	= "MBP";
+		
+		public bool 	entryOne	 	= false;
+		public bool 	entryTwo 		= false;
+		public string 	ComputerName	= "MBP";
+		///  money management
+		public double 	shares;
+		public int  	portfolioSize	= 826000;
+		public int	numSystems		= 10;
+		private int 	initialBalance;
+		private	int 	cashAvailiable;
+		private	double 	priorTradesCumProfit;
+		private	int 	priorTradesCount;
+		private	double 	sharesFraction;
+		
+		// stops
+		private double stopLine;
 		
 		protected override void OnStateChange()
 		{
 			if (State == State.SetDefaults)
 			{
 				Description									= @"Enter the description for your new custom Strategy here.";
-				Name										= "Chann el System";
+				Name										= "Channel System";
 				Calculate									= Calculate.OnBarClose;
 				EntriesPerDirection							= 1;
 				EntryHandling								= EntryHandling.AllEntries;
@@ -82,23 +94,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 		/// </summary>
 		protected override void OnBarUpdate()
 		{
-			/// Position sizing: Maximum 2 positions per index, Maximum 10 positions 
-			/// c. Maximum 10% of capital in any single position 
-			/// d. Maximum 20% of capital in any single index 
-			/// e. Buy in equal dollar amounts
-			/// trail stop
-			/// market Condition Green color bars in indicator, add public series
-			/// worlds stop of 5%
-			
-			
-			/// Entry #1
-			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() ) {
-				EnterLong(Convert.ToInt32(shares), "");
-				entryPrice = Close[0];
-				entryBar = 1;
-				entryOne = true;
-			}
-			
+			/// Long Channel Conitions + Entry
+			setLongSentry(stopPct: 3);
 			/// Entry #2
 			/// this extremely fukin complicated
 			/// assign entry names for both entries
@@ -110,18 +107,16 @@ namespace NinjaTrader.NinjaScript.Strategies
 //			}
 			
 			/// %R Target
-			if (WilliamsR(10)[0] > -30 ) {
-				ExitLong(Convert.ToInt32(shares));
-				resetEntry();
-				tradeUpdate(tradeType: " Long Target on "+Instrument.MasterInstrument.Name);
-			}
-			/// Stop - check math
-			if ( Close[0] < entryPrice - ( entryPrice * 0.03)) {
-				ExitLong(Convert.ToInt32(shares));
-				resetEntry();
-			}
+			setLongTarget();
+			/// Stop - check math change worls indexes to 5%
+			setInitialStop(pct: 3);
 			/// N day stop
 			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
+			
+			/// Position sizing: Maximum 2 positions per index
+			/// trail stop
+			/// market Condition Green color bars in indicator, add public series
+			
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -133,14 +128,86 @@ namespace NinjaTrader.NinjaScript.Strategies
 		and try to convert this trade into a longer term trend following position.
 		*/
 
+		protected int calcPositionSize() {
+			/// d. Maximum 20% of capital in any single index , Maximum 10 positions 
+			/// e. Buy in equal dollar amounts
+			/// c. Maximum 10% of capital in any single position 
+			/// Store the strategy's prior cumulated realized profit and number of trades
+			priorTradesCumProfit = SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit;
+			/// cal initialBalance s portion  of portfoli / num systems
+			initialBalance = portfolioSize / numSystems ;
+			/// Adjust position size for profit and loss
+			cashAvailiable = initialBalance + (int)priorTradesCumProfit;
+			/// calc positionsize
+			sharesFraction = cashAvailiable / Close[0];
+			return (int)sharesFraction;
+		}
+		
+		protected void setLongSentry(int stopPct) {
+			/// Entry #1
+			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() ) {
+				shares = calcPositionSize();
+				EnterLong(Convert.ToInt32(shares), "");
+				entryPrice = Close[0];
+				entryBar = 1;
+				entryOne = true;
+				string entryData = "------->  LE on " +Instrument.MasterInstrument.Name + " shares " + shares + "  $" + cashAvailiable;
+				Print(entryData);
+				
+				string entryTxt = "LE 1\n" + shares+" shares" + "\n$"+cashAvailiable.ToString("0");
+				Draw.Text(this, "Cash"+CurrentBar, entryTxt, 0, MIN(Low, 10)[0] - (TickSize* 40), Brushes.LimeGreen);
+				
+				calcInitialStop(pct: stopPct);
+				// calc hard stop loss in $$$
+				/// entryPrice - stopline * shares
+				// show loss at stop line
+				double lossInPonts =  ( stopLine - entryPrice );
+				double lossInTrade = shares * lossInPonts;
+				double lossInPct  = lossInTrade / cashAvailiable;
+				string traderLossStats = lossInPonts.ToString("0.00") + "\t$" + lossInTrade.ToString("0") + "\t%" +lossInPct.ToString("0.00") ;
+				Draw.Text(this, "loss"+CurrentBar, traderLossStats, 0, stopLine - (TickSize* 40), Brushes.Crimson);
+			}
+		}
+		
+		protected void setLongTarget() {
+			/// %R Target
+			if ( Position.MarketPosition == MarketPosition.Long && WilliamsR(10)[0] > -30 ) {
+				ExitLong(Convert.ToInt32(shares));
+				resetEntry();
+				tradeUpdate(tradeType: " LX_Target on "+Instrument.MasterInstrument.Name);
+			}
+		}
+		
+		protected void calcInitialStop(int pct) {
+			double converteddPct = pct * 0.01;
+			stopLine =  entryPrice - ( entryPrice * converteddPct);
+		}
+		
+		///  initial stop
+		protected void setInitialStop(int pct) {
+//			double converteddPct = pct * 0.01;
+//			stopLine =  entryPrice - ( entryPrice * converteddPct);
+			/// show entry + stop line
+			if ( Position.MarketPosition == MarketPosition.Long ){
+				Draw.Text(this, "EL"+CurrentBar, "-", 0, entryPrice, Brushes.LimeGreen);
+				Draw.Text(this, "sL"+CurrentBar, "-", 0, stopLine, Brushes.Crimson);
+			}
+			/// exit trade
+			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < stopLine ) {
+				ExitLong(Convert.ToInt32(shares));
+				resetEntry();
+				tradeUpdate(tradeType: " LX_Stop on "+Instrument.MasterInstrument.Name);
+			}
+		}
 		/// After 2 Pints exit  N Bars
 		protected void exitAfterNBars(int bars, bool active)
 		{
 			/// Stop after n Bars
 			entryBar ++;
-			if ( entryBar > bars ) {
+			if ( Position.MarketPosition == MarketPosition.Long && entryBar > bars ) {
 				ExitLong(Convert.ToInt32(shares));
 				resetEntry();
+				tradeUpdate(tradeType: " LX_Time on "+Instrument.MasterInstrument.Name);
 			}
 		}
 		
@@ -159,7 +226,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 		
 		public void tradeUpdate(string tradeType) {
-			var titleMessage = tradeType;
+			//var titleMessage = tradeType;
 			var bodyMessage = ComputerName + ", " + tradeType + ", occurred on, " + Time[0].ToString() +", "+Close[0] +",";
 			bodyMessage = bodyMessage +"Trade count,  " + SystemPerformance.AllTrades.TradesPerformance.TradesCount.ToString("0")+", ";
 			bodyMessage = bodyMessage +"Net profit, " + SystemPerformance.AllTrades.TradesPerformance.NetProfit.ToString("0.0")+", ";
@@ -180,14 +247,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 			/// TODO: ROI
 			/// 
 			
-			/// TODO: save file
+			/// TODO: save file as stream
 			string messageToDisplay = ComputerName+" Trade at " +Time[0].ToString()  + " " + Instrument.MasterInstrument.Name;
-			//Print(" ");
-			//Print(messageToDisplay);
-			//Print(titleMessage);
-			//Print(bodyMessage);
-			//Print(" ");
-			string messageToFile = messageToDisplay + ", " + titleMessage + ", " + bodyMessage;
+			string messageToFile = messageToDisplay + ", " + bodyMessage;
 			//appendConnectionFile(message: messageToFile);
 			Print(messageToFile);
 		}
