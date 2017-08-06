@@ -31,14 +31,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private SMA		sma0;
 		public double 	entryPrice;
 		public int 		entryBar;
-		public int 		shares = 100;
+		public int 		entryBar2;
+		public int 		shares 		= 100;
+		public bool 	entryOne	 = false;
+		public bool 	entryTwo 	= false;
+		public string ComputerName	= "MBP";
 		
 		protected override void OnStateChange()
 		{
 			if (State == State.SetDefaults)
 			{
 				Description									= @"Enter the description for your new custom Strategy here.";
-				Name										= "ChanelSystem";
+				Name										= "Chann el System";
 				Calculate									= Calculate.OnBarClose;
 				EntriesPerDirection							= 1;
 				EntryHandling								= EntryHandling.AllEntries;
@@ -73,39 +77,51 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 
 		/// <summary>
-		/// Universe: SPY, QQQ, DIA, MDY, IWM, EFA, ILF, EEM, EPP,  IEV
+		/// Universe: SPY, QQQ, DIA, MDY, IWM, EFA, ILF, EEM, EPP,  IEV (USO Good too)
 		/// Performance:  cash 75% of the time,Win Pct 65%, average wins >= average losses
 		/// </summary>
 		protected override void OnBarUpdate()
 		{
-			/// Position sizing: Maximum 2 positions per index, Maximum 10 positions c. Maximum 10% of capital in any single position 
-			/// d. Maximum 20% of capital in any single index e. Buy in equal dollar amounts
-			/// 2nd entry
+			/// Position sizing: Maximum 2 positions per index, Maximum 10 positions 
+			/// c. Maximum 10% of capital in any single position 
+			/// d. Maximum 20% of capital in any single index 
+			/// e. Buy in equal dollar amounts
 			/// trail stop
-			/// 7 day stop
-			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
 			/// market Condition Green color bars in indicator, add public series
 			/// worlds stop of 5%
 			
 			
 			/// Entry #1
-			if ( Position.MarketPosition == MarketPosition.Flat && Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && WilliamsR(10)[0] < -80 ) {
+			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() ) {
 				EnterLong(Convert.ToInt32(shares), "");
 				entryPrice = Close[0];
 				entryBar = 1;
+				entryOne = true;
 			}
+			
 			/// Entry #2
-			/// 
-			/// Target
+			/// this extremely fukin complicated
+			/// assign entry names for both entries
+			/// assign discrete exits for both LAMO wait TIll last
+//			if (Position.MarketPosition == MarketPosition.Flat && entryConditions() && !entryTwo  ) {
+//				EnterLong(Convert.ToInt32(shares), "");
+//				entryBar2 = 1;
+//				entryTwo = true;
+//			}
+			
+			/// %R Target
 			if (WilliamsR(10)[0] > -30 ) {
 				ExitLong(Convert.ToInt32(shares));
-				entryBar = 0;
+				resetEntry();
+				tradeUpdate(tradeType: " Long Target on "+Instrument.MasterInstrument.Name);
 			}
 			/// Stop - check math
 			if ( Close[0] < entryPrice - ( entryPrice * 0.03)) {
 				ExitLong(Convert.ToInt32(shares));
-				entryBar = 0;
+				resetEntry();
 			}
+			/// N day stop
+			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -117,21 +133,64 @@ namespace NinjaTrader.NinjaScript.Strategies
 		and try to convert this trade into a longer term trend following position.
 		*/
 
-		/// <summary>
-		/// After 2 Pints exit o N Bars
-		/// </summary>
-		/// <param name="bars"></param>
-		/// <param name="active"></param>
+		/// After 2 Pints exit  N Bars
 		protected void exitAfterNBars(int bars, bool active)
 		{
 			/// Stop after n Bars
 			entryBar ++;
 			if ( entryBar > bars ) {
 				ExitLong(Convert.ToInt32(shares));
-				entryBar = 0;
+				resetEntry();
 			}
 		}
 		
+		protected void resetEntry()
+		{
+			entryBar = 0;
+			entryOne = false;
+		}
+		
+		protected bool entryConditions()
+		{
+			bool signal = false;
+			if ( Position.MarketPosition == MarketPosition.Flat && Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && WilliamsR(10)[0] < -80 )
+				signal = true;
+			return signal;
+		}
+		
+		public void tradeUpdate(string tradeType) {
+			var titleMessage = tradeType;
+			var bodyMessage = ComputerName + ", " + tradeType + ", occurred on, " + Time[0].ToString() +", "+Close[0] +",";
+			bodyMessage = bodyMessage +"Trade count,  " + SystemPerformance.AllTrades.TradesPerformance.TradesCount.ToString("0")+", ";
+			bodyMessage = bodyMessage +"Net profit, " + SystemPerformance.AllTrades.TradesPerformance.NetProfit.ToString("0.0")+", ";
+			bodyMessage = bodyMessage +"Profit factor," + SystemPerformance.AllTrades.TradesPerformance.ProfitFactor.ToString("0.00")+", ";
+			bodyMessage = bodyMessage +"----->   Detailed Report   <-----,";
+			bodyMessage = bodyMessage +"Max # of consecutive losers is," + SystemPerformance.AllTrades.TradesPerformance.MaxConsecutiveLoser+", ";
+			bodyMessage = bodyMessage +"Largest loss of all trades is, $," + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestLoser.ToString("0.0")+", ";
+			bodyMessage = bodyMessage +"Largest win of all trades is $," + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestWinner.ToString("0.0")+", ";
+			bodyMessage = bodyMessage +"Average monthly profit is $," + SystemPerformance.AllTrades.TradesPerformance.Currency.ProfitPerMonth.ToString("0.0");
+			
+			if (SystemPerformance.AllTrades.WinningTrades.Count != 0) {
+					double winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
+					winPct = winPct * 100;
+					bodyMessage = bodyMessage + ", " + "Win Percent is, " + winPct.ToString("0.0")+ "%";
+				}
+			
+			///
+			/// TODO: ROI
+			/// 
+			
+			/// TODO: save file
+			string messageToDisplay = ComputerName+" Trade at " +Time[0].ToString()  + " " + Instrument.MasterInstrument.Name;
+			//Print(" ");
+			//Print(messageToDisplay);
+			//Print(titleMessage);
+			//Print(bodyMessage);
+			//Print(" ");
+			string messageToFile = messageToDisplay + ", " + titleMessage + ", " + bodyMessage;
+			//appendConnectionFile(message: messageToFile);
+			Print(messageToFile);
+		}
 		#region Properties
 		[NinjaScriptProperty]
 		[Display(ResourceType = typeof(Custom.Resource), Name="US Index", Order=1, GroupName="NinjaScriptStrategyParameters")]
