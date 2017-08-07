@@ -28,7 +28,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 {
 	public class ChanelSystem : Strategy
 	{
-		private SMA		sma0;
+		
 		public double 	entryPrice;
 		public int 		entryBar;
 		public int 		entryBar2;
@@ -39,7 +39,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		///  money management
 		public double 	shares;
 		public int  	portfolioSize	= 826000;
-		public int	numSystems		= 10;
+		public int		numSystems		= 10;
 		private int 	initialBalance;
 		private	int 	cashAvailiable;
 		private	double 	priorTradesCumProfit;
@@ -51,6 +51,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private double 	trailStop;
 		private double  lossInPonts;
 		private bool	autoStop = true;
+		
+		///  indicators
+		private MarketCondition MarketCondition1;
+		private SMA		sma0;
 		
 		protected override void OnStateChange()
 		{
@@ -84,10 +88,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 			}
 			else if (State == State.Configure)
 			{
+				AddChartIndicator(MarketCondition(showBands: false, showVolatilityText: false));
 			}
 			else if (State == State.DataLoaded)
 			{
-				sma0		= SMA(200);
+				sma0				= SMA(200);
+				ClearOutputWindow(); 
 			}
 		}
 
@@ -98,7 +104,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		protected override void OnBarUpdate()
 		{
 			/// Long Channel Conditions + Entry
-			setLongSentry(stopPct: 3);
+			setLongSentry(stopPct: 3, marketCond: false);
 			/// %R Target
 			setLongTarget();
 			/// Stop - check math change worls indexes to 5%
@@ -108,13 +114,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 			/// trail stop
 			setTrailOnClose(isOn: true);
 
-			/// MARK: - TODO - market Condition Green color bars in indicator, add public series
+			/// stats window
+			setTextBox(textInBox: popuateStatsTextBox());
+			/// MARK: - TODO - market Condition Green color bars in indicator
 			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
-			/// MARK: - TODO - Calc ROI
 			/// MARK: - TODO - Calc R
 			/// MARK: - TODO ------>   Entry #2
+			/// Set inputs to public
 			setSecondEntry(stopPct: 3);
-			
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -142,9 +149,34 @@ namespace NinjaTrader.NinjaScript.Strategies
 			return (int)sharesFraction;
 		}
 		
-		protected void setLongSentry(int stopPct) {
+		protected bool setMarketConditionFilter(bool isOn) {
+			bool signal = false;
+			if (isOn) {
+				int conditionNumber =MarketCondition(showBands: false, showVolatilityText: false).MarketCond[0];
+				Print("\tMarket Cindition is on\t" + conditionNumber);
+				//if 1 2 3 6
+				if ( conditionNumber != 0 && ( conditionNumber < 4 || conditionNumber == 6 )) {
+					signal = true;
+				}
+			} 
+			if (!isOn) {
+				signal = true;
+				Print("\tMarket Cindition is OFF !!!\t");
+			}
+			return signal;
+		}
+		
+		protected bool entryConditions()
+		{
+			bool signal = false;
+			if ( Position.MarketPosition == MarketPosition.Flat && Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && WilliamsR(10)[0] < -80 )
+				signal = true;
+			return signal;
+		}
+		
+		protected void setLongSentry(int stopPct, bool marketCond) {
 			/// Entry #1
-			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() ) {
+			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() && setMarketConditionFilter( isOn: marketCond ) ) {
 				shares = calcPositionSize();
 				EnterLong(Convert.ToInt32(shares), "");
 				entryPrice = Close[0];
@@ -201,9 +233,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 						Instrument.MasterInstrument.Name == "MDY" ||
 						Instrument.MasterInstrument.Name == "IWM" 
 					) {
+						Print("Stop is 3% for US Indexes");
 						convertedPct = 3 * 0.01;	// 3% for US Indexes
 				} else {
-					convertedPct = 5 * 0.01;		// 5% for worls
+					convertedPct = 5 * 0.01;		// 5% for forign indexes
+					Print("Stop is 5% for forign indexes");
 				}
 			}
 			stopLine =  entryPrice - ( entryPrice * convertedPct);
@@ -270,13 +304,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			entryOne = false;
 		}
 		
-		protected bool entryConditions()
-		{
-			bool signal = false;
-			if ( Position.MarketPosition == MarketPosition.Flat && Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && WilliamsR(10)[0] < -80 )
-				signal = true;
-			return signal;
-		}
+		
 		
 		public void tradeUpdate(string tradeType) {
 			//var titleMessage = tradeType;
@@ -294,7 +322,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					double winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
 					winPct = winPct * 100;
 					bodyMessage = bodyMessage + ", " + "Win Percent is, " + winPct.ToString("0.0")+ "%";
-				}
+			}
 			
 			///
 			/// TODO: ROI
@@ -306,6 +334,42 @@ namespace NinjaTrader.NinjaScript.Strategies
 			//appendConnectionFile(message: messageToFile);
 			Print(messageToFile);
 		}
+		
+		protected string popuateStatsTextBox() {
+			double winPct = 0.00;
+			if (SystemPerformance.AllTrades.WinningTrades.Count != 0) {
+					winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
+					winPct = winPct * 100;		
+			}
+			/// TODO: ROI
+			double roi = ( priorTradesCumProfit / initialBalance ) * 100;
+			
+			string bodyMessage = "\n\t";
+			bodyMessage = bodyMessage +SystemPerformance.AllTrades.TradesPerformance.TradesCount.ToString("0")+" Trades";
+			bodyMessage = bodyMessage +"\tNP $" + SystemPerformance.AllTrades.TradesPerformance.NetProfit.ToString("0")+"\t\n";
+			bodyMessage = bodyMessage  + "\t" + winPct.ToString("0.0")+ "%";
+			bodyMessage = bodyMessage +"\t" + SystemPerformance.AllTrades.TradesPerformance.ProfitFactor.ToString("0.00")+" PF\t";
+			bodyMessage = bodyMessage  + SystemPerformance.AllTrades.TradesPerformance.MaxConsecutiveLoser +" LR";
+			double avgTrade = SystemPerformance.AllTrades.TradesPerformance.GrossProfit / SystemPerformance.AllTrades.TradesPerformance.TradesCount;
+			bodyMessage = bodyMessage +"\n\tAverage Trade \t$" + avgTrade.ToString("0");
+			bodyMessage = bodyMessage +"\n\tOutliers $" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestLoser.ToString("0");
+			bodyMessage = bodyMessage +"\t$" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestWinner.ToString("0");
+			bodyMessage = bodyMessage +"\n\tMonthly\t$" + SystemPerformance.AllTrades.TradesPerformance.Currency.ProfitPerMonth.ToString("0") ;
+			bodyMessage = bodyMessage +"\tROI  " + roi.ToString("0.00") + "%"+"\t\n";
+			return bodyMessage;
+		}
+		
+		protected void setTextBox(string textInBox)
+		{
+			/// show market condition
+			TextFixed myTF = Draw.TextFixed(this, "tradeStat", textInBox, TextPosition.BottomLeft);
+			myTF.TextPosition = TextPosition.BottomLeft;
+			myTF.AreaBrush = Brushes.DimGray;
+			myTF.AreaOpacity = 90;
+			myTF.TextBrush = Brushes.Black;
+		}
+		
+		
 		#region Properties
 		[NinjaScriptProperty]
 		[Display(ResourceType = typeof(Custom.Resource), Name="US Index", Order=1, GroupName="NinjaScriptStrategyParameters")]
