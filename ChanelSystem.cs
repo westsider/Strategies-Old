@@ -110,17 +110,20 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 			/// MARK: - TODO - market Condition Green color bars in indicator, add public series
 			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
+			/// MARK: - TODO - Calc ROI
+			/// MARK: - TODO - Calc R
 			/// MARK: - TODO ------>   Entry #2
 			setSecondEntry(stopPct: 3);
 			
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
-		/* Optional: Windfall profit exit: if you a 5% gain in a position, 
+		/* Optional: 
+		1. Windfall profit exit: if you a 5% gain in a position, 
 		either cash it or tighten your trailing stop to 1% trailing stop. 
 		reduce volatility, you could elect to take only the US index signals. 
-		To reduce volatility, you could elect to not take signals when price is within 2% of the index’s 200 day MA. 
-		To try for more profits, you could elect to trail successful trades with a 1x ATR% trailing stop or 3% trailing stop 
+		2. To reduce volatility, you could elect to not take signals when price is within 2% of the index’s 200 day MA. 
+		3. To try for more profits, you could elect to trail successful trades with a 1x ATR% trailing stop or 3% trailing stop 
 		and try to convert this trade into a longer term trend following position.
 		*/
 
@@ -191,10 +194,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if ( !autoStop ) {
 				convertedPct = pct * 0.01;
 			}
-			/// Auto Set Position stop to 3% US SPY QQQ DIA MDY IWM, 5% EFA ILF EEM EPP IEV
+			/// Auto Set Position stop to 3% US SPY DIA MDY IWM, 5% QQQ EFA ILF EEM EPP IEV
 			if( autoStop ) {
 				if ( Instrument.MasterInstrument.Name == "SPY" ||
-						Instrument.MasterInstrument.Name == "QQQ" ||
 						Instrument.MasterInstrument.Name == "DIA" ||
 						Instrument.MasterInstrument.Name == "MDY" ||
 						Instrument.MasterInstrument.Name == "IWM" 
@@ -205,15 +207,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 				}
 			}
 			stopLine =  entryPrice - ( entryPrice * convertedPct);
-			//if( BarsSinceEntryExecution() == 1 ) {
-				trailStop = stopLine;
-			//}
+			trailStop = stopLine;
 		}
 		
 		///  initial stop
 		protected void setInitialStop(int pct, bool auto) {
-//			double converteddPct = pct * 0.01;
-//			stopLine =  entryPrice - ( entryPrice * converteddPct);
 			/// show entry + stop line
 			if ( Position.MarketPosition == MarketPosition.Long ){
 				Draw.Text(this, "EL"+CurrentBar, "-", 0, entryPrice, Brushes.LimeGreen);
