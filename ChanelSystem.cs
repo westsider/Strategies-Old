@@ -46,8 +46,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private	int 	priorTradesCount;
 		private	double 	sharesFraction;
 		
-		// stops
+		/// stops
 		private double stopLine;
+		private double trailStop;
+		private double  lossInPonts;
 		
 		protected override void OnStateChange()
 		{
@@ -94,28 +96,21 @@ namespace NinjaTrader.NinjaScript.Strategies
 		/// </summary>
 		protected override void OnBarUpdate()
 		{
-			/// Long Channel Conitions + Entry
+			/// Long Channel Conditions + Entry
 			setLongSentry(stopPct: 3);
-			/// Entry #2
-			/// this extremely fukin complicated
-			/// assign entry names for both entries
-			/// assign discrete exits for both LAMO wait TIll last
-//			if (Position.MarketPosition == MarketPosition.Flat && entryConditions() && !entryTwo  ) {
-//				EnterLong(Convert.ToInt32(shares), "");
-//				entryBar2 = 1;
-//				entryTwo = true;
-//			}
-			
+			/// MARK: - TODO Entry #2
+			setSecondEntry(stopPct: 3);
 			/// %R Target
 			setLongTarget();
 			/// Stop - check math change worls indexes to 5%
 			setInitialStop(pct: 3);
 			/// N day stop
 			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
-			
-			/// Position sizing: Maximum 2 positions per index
 			/// trail stop
-			/// market Condition Green color bars in indicator, add public series
+			setTrailOnClose(isOn: true);
+			exitOnTrailStop(isOn: true);
+			/// MARK: - TODO - market Condition Green color bars in indicator, add public series
+			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
 			
 		}
 		
@@ -161,12 +156,24 @@ namespace NinjaTrader.NinjaScript.Strategies
 				// calc hard stop loss in $$$
 				/// entryPrice - stopline * shares
 				// show loss at stop line
-				double lossInPonts =  ( stopLine - entryPrice );
+				lossInPonts =  ( stopLine - entryPrice );
 				double lossInTrade = shares * lossInPonts;
 				double lossInPct  = lossInTrade / cashAvailiable;
 				string traderLossStats = lossInPonts.ToString("0.00") + "\t$" + lossInTrade.ToString("0") + "\t%" +lossInPct.ToString("0.00") ;
 				Draw.Text(this, "loss"+CurrentBar, traderLossStats, 0, stopLine - (TickSize* 40), Brushes.Crimson);
 			}
+		}
+		
+		/// MARK: - TODO Entry #2
+		protected void setSecondEntry(int stopPct) {
+			/// this extremely fukin complicated
+			/// assign entry names for both entries
+			/// assign discrete exits for both LAMO wait TIll last
+//			if (Position.MarketPosition == MarketPosition.Flat && entryConditions() && !entryTwo  ) {
+//				EnterLong(Convert.ToInt32(shares), "");
+//				entryBar2 = 1;
+//				entryTwo = true;
+//			}
 		}
 		
 		protected void setLongTarget() {
@@ -179,8 +186,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 		
 		protected void calcInitialStop(int pct) {
-			double converteddPct = pct * 0.01;
-			stopLine =  entryPrice - ( entryPrice * converteddPct);
+			double convertedPct = pct * 0.01;
+			stopLine =  entryPrice - ( entryPrice * convertedPct);
+			//if( BarsSinceEntryExecution() == 1 ) {
+				trailStop = stopLine;
+			//}
 		}
 		
 		///  initial stop
@@ -199,6 +209,36 @@ namespace NinjaTrader.NinjaScript.Strategies
 				tradeUpdate(tradeType: " LX_Stop on "+Instrument.MasterInstrument.Name);
 			}
 		}
+		
+		/// trail stopadjusted for close > close[1]
+		protected void setTrailOnClose(bool isOn) {
+			if ( !isOn ) { return; }
+			if ( Position.MarketPosition == MarketPosition.Long && BarsSinceEntryExecution() >= 1 ){
+				if (Close[0] > Close[1] ) {
+					double newTrailStop = Close[0]  + lossInPonts;
+					//double closeDifference = Close[0] - Close[1];
+					//double newTrailStop2 = closeDifference + 
+					//	Print(lossInPonts);
+					//Draw.Text(this, "lossInPonts"+CurrentBar, lossInPonts.ToString("0.00"), 0, Low[0], Brushes.Crimson);
+					/// stop only moves up
+					if (newTrailStop > trailStop ) {
+						trailStop = newTrailStop;
+					}
+					
+				}
+				Draw.Text(this, "trail"+CurrentBar, "*", 0, trailStop, Brushes.Crimson);
+			}
+		}
+		/// trail stop
+		protected void exitOnTrailStop(bool isOn) {
+			if ( !isOn ) { return; }
+			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < trailStop ) {
+				ExitLong(Convert.ToInt32(shares));
+				resetEntry();
+				tradeUpdate(tradeType: " LX_Trail on "+Instrument.MasterInstrument.Name);
+			}
+		}
+		
 		/// After 2 Pints exit  N Bars
 		protected void exitAfterNBars(int bars, bool active)
 		{
