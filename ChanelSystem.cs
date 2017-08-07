@@ -56,6 +56,15 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private MarketCondition MarketCondition1;
 		private SMA		sma0;
 		
+		///  reporting
+		private double  gainInPoints; 
+			
+		private	double riskInLastTrade; 
+			
+		private	double rValue; 
+		
+		private	double totalR; 
+		
 		protected override void OnStateChange()
 		{
 			if (State == State.SetDefaults)
@@ -116,11 +125,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 			/// stats window
 			setTextBox(textInBox: popuateStatsTextBox());
-			/// MARK: - TODO - market Condition Green color bars in indicator
-			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
-			/// MARK: - TODO - Calc R
-			/// MARK: - TODO ------>   Entry #2
+
 			/// Set inputs to public
+			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
 			setSecondEntry(stopPct: 3);
 		}
 		
@@ -324,9 +331,27 @@ namespace NinjaTrader.NinjaScript.Strategies
 					bodyMessage = bodyMessage + ", " + "Win Percent is, " + winPct.ToString("0.0")+ "%";
 			}
 			
-			///
-			/// TODO: ROI
-			/// 
+//			/// cant figure out hoe to call the on trade update method
+//			if( SystemPerformance.AllTrades.Count  > 1 ) {
+//				Trade lastTrade = SystemPerformance.AllTrades[SystemPerformance.AllTrades.Count -1];
+//				string thisTrade = "*****\t"+Time[0].ToShortDateString() + "\t"+ lastTrade.Entry.Price.ToString("0.00") + "\t"+  lastTrade.Exit.Price.ToString("0.00") + "\t"+  lastTrade.ProfitPoints.ToString("0.00");
+//				Print(thisTrade);
+//			}
+			gainInPoints = Close[0] - entryPrice;
+			
+			riskInLastTrade = lossInPonts;
+			
+			if ( gainInPoints > 0 ) {
+				rValue = (gainInPoints / riskInLastTrade) *-1;
+				
+				totalR = totalR + rValue;
+				
+				string rCalc = "    GAIN\t"+gainInPoints.ToString("0.00") +"\tRISK:\t"+lossInPonts.ToString("0.00") +"\tR:\t"+rValue.ToString("0.00")+"\tTotal R:\t"+totalR.ToString("0.00");
+				
+				bodyMessage = bodyMessage + rCalc;
+			}
+				//lastRvalue = trade result compared to stop value
+			//			lossInPonts
 			
 			/// TODO: save file as stream
 			string messageToDisplay = ComputerName+" Trade at " +Time[0].ToString()  + " " + Instrument.MasterInstrument.Name;
@@ -341,7 +366,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
 					winPct = winPct * 100;		
 			}
-			/// TODO: ROI
+	
 			double roi = ( priorTradesCumProfit / initialBalance ) * 100;
 			
 			string bodyMessage = "\n\t";
@@ -355,7 +380,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			bodyMessage = bodyMessage +"\n\tOutliers $" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestLoser.ToString("0");
 			bodyMessage = bodyMessage +"\t$" + SystemPerformance.AllTrades.TradesPerformance.Currency.LargestWinner.ToString("0");
 			bodyMessage = bodyMessage +"\n\tMonthly\t$" + SystemPerformance.AllTrades.TradesPerformance.Currency.ProfitPerMonth.ToString("0") ;
-			bodyMessage = bodyMessage +"\tROI  " + roi.ToString("0.00") + "%"+"\t\n";
+			bodyMessage = bodyMessage +"\tROI  " + roi.ToString("0.00") + "%"+"\n\tTotal R:\t"+totalR.ToString("0.00")+"\t\n";
 			return bodyMessage;
 		}
 		
