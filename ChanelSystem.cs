@@ -47,9 +47,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private	double 	sharesFraction;
 		
 		/// stops
-		private double stopLine;
-		private double trailStop;
+		private double 	stopLine;
+		private double 	trailStop;
 		private double  lossInPonts;
+		private bool	autoStop = true;
 		
 		protected override void OnStateChange()
 		{
@@ -98,19 +99,19 @@ namespace NinjaTrader.NinjaScript.Strategies
 		{
 			/// Long Channel Conditions + Entry
 			setLongSentry(stopPct: 3);
-			/// MARK: - TODO Entry #2
-			setSecondEntry(stopPct: 3);
 			/// %R Target
 			setLongTarget();
 			/// Stop - check math change worls indexes to 5%
-			setInitialStop(pct: 3);
+			setInitialStop(pct: 3, auto: true);
 			/// N day stop
 			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
 			/// trail stop
 			setTrailOnClose(isOn: true);
-			exitOnTrailStop(isOn: true);
+
 			/// MARK: - TODO - market Condition Green color bars in indicator, add public series
 			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
+			/// MARK: - TODO ------>   Entry #2
+			setSecondEntry(stopPct: 3);
 			
 		}
 		
@@ -186,7 +187,23 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 		
 		protected void calcInitialStop(int pct) {
-			double convertedPct = pct * 0.01;
+			double convertedPct = 0.03;
+			if ( !autoStop ) {
+				convertedPct = pct * 0.01;
+			}
+			/// Auto Set Position stop to 3% US SPY QQQ DIA MDY IWM, 5% EFA ILF EEM EPP IEV
+			if( autoStop ) {
+				if ( Instrument.MasterInstrument.Name == "SPY" ||
+						Instrument.MasterInstrument.Name == "QQQ" ||
+						Instrument.MasterInstrument.Name == "DIA" ||
+						Instrument.MasterInstrument.Name == "MDY" ||
+						Instrument.MasterInstrument.Name == "IWM" 
+					) {
+						convertedPct = 3 * 0.01;	// 3% for US Indexes
+				} else {
+					convertedPct = 5 * 0.01;		// 5% for worls
+				}
+			}
 			stopLine =  entryPrice - ( entryPrice * convertedPct);
 			//if( BarsSinceEntryExecution() == 1 ) {
 				trailStop = stopLine;
@@ -194,7 +211,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		}
 		
 		///  initial stop
-		protected void setInitialStop(int pct) {
+		protected void setInitialStop(int pct, bool auto) {
 //			double converteddPct = pct * 0.01;
 //			stopLine =  entryPrice - ( entryPrice * converteddPct);
 			/// show entry + stop line
@@ -216,10 +233,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if ( Position.MarketPosition == MarketPosition.Long && BarsSinceEntryExecution() >= 1 ){
 				if (Close[0] > Close[1] ) {
 					double newTrailStop = Close[0]  + lossInPonts;
-					//double closeDifference = Close[0] - Close[1];
-					//double newTrailStop2 = closeDifference + 
-					//	Print(lossInPonts);
-					//Draw.Text(this, "lossInPonts"+CurrentBar, lossInPonts.ToString("0.00"), 0, Low[0], Brushes.Crimson);
 					/// stop only moves up
 					if (newTrailStop > trailStop ) {
 						trailStop = newTrailStop;
@@ -228,6 +241,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				}
 				Draw.Text(this, "trail"+CurrentBar, "*", 0, trailStop, Brushes.Crimson);
 			}
+			exitOnTrailStop(isOn: isOn);
 		}
 		/// trail stop
 		protected void exitOnTrailStop(bool isOn) {
@@ -236,10 +250,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 				ExitLong(Convert.ToInt32(shares));
 				resetEntry();
 				tradeUpdate(tradeType: " LX_Trail on "+Instrument.MasterInstrument.Name);
+				Draw.Text(this, "LX_Trail"+CurrentBar, "LX_Trail", 0, Low[0]- (TickSize * 40), Brushes.Crimson);
 			}
 		}
 		
-		/// After 2 Pints exit  N Bars
+		///  exit  N Bars
 		protected void exitAfterNBars(int bars, bool active)
 		{
 			/// Stop after n Bars
