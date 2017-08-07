@@ -94,6 +94,12 @@ namespace NinjaTrader.NinjaScript.Strategies
 				NumberOfSystems					= 10;
 				ExitAfterNbars					= false;
 				StartingCapital					= 826000;
+				/// Set inputs to public
+				UseMarketCondition 				= false;
+				StopPct 						= 3;
+				AutoSetStopFromMarket			= true;
+				ExitAfterBArs 					= 7;
+				UseTrailStop 					= false;
 			}
 			else if (State == State.Configure)
 			{
@@ -113,22 +119,23 @@ namespace NinjaTrader.NinjaScript.Strategies
 		protected override void OnBarUpdate()
 		{
 			/// Long Channel Conditions + Entry
-			setLongSentry(stopPct: 3, marketCond: false);
+			setLongSentry(stopPct: StopPct, marketCond: UseMarketCondition);
 			/// %R Target
 			setLongTarget();
 			/// Stop - check math change worls indexes to 5%
-			setInitialStop(pct: 3, auto: true);
+			setInitialStop(pct: StopPct, auto: AutoSetStopFromMarket);
 			/// N day stop
-			exitAfterNBars(bars: 7, active: ExitAfterNbars);  // minor differece
+			exitAfterNBars(bars: ExitAfterBArs, active: ExitAfterNbars);  // minor differece
 			/// trail stop
-			setTrailOnClose(isOn: true);
+			setTrailOnClose(isOn: UseTrailStop);
 
 			/// stats window
 			setTextBox(textInBox: popuateStatsTextBox());
 
-			/// Set inputs to public
-			/// MARK: - TODO - Position sizing: Maximum 2 positions per index
-			setSecondEntry(stopPct: 3);
+			/// MARK: - TODO - 
+			setSecondEntry(stopPct: StopPct);
+			
+			/// TODO: save file as stream
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -350,9 +357,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				
 				bodyMessage = bodyMessage + rCalc;
 			}
-				//lastRvalue = trade result compared to stop value
-			//			lossInPonts
-			
+
 			/// TODO: save file as stream
 			string messageToDisplay = ComputerName+" Trade at " +Time[0].ToString()  + " " + Instrument.MasterInstrument.Name;
 			string messageToFile = messageToDisplay + ", " + bodyMessage;
@@ -424,6 +429,34 @@ namespace NinjaTrader.NinjaScript.Strategies
 		[Display(ResourceType = typeof(Custom.Resource), Name="Starting Capital", Order=5, GroupName="NinjaScriptStrategyParameters")]
 		public int StartingCapital
 		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Display(ResourceType = typeof(Custom.Resource), Name="Use Market Condition Filter", Order=6, GroupName="NinjaScriptStrategyParameters")]
+		public bool UseMarketCondition
+		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Display(ResourceType = typeof(Custom.Resource), Name="Auto Set Stop From Market", Order=7, GroupName="NinjaScriptStrategyParameters")]
+		public bool AutoSetStopFromMarket
+		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Display(ResourceType = typeof(Custom.Resource), Name="Use Trail Stop", Order=8, GroupName="NinjaScriptStrategyParameters")]
+		public bool UseTrailStop
+		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Range(1, int.MaxValue)]
+		[Display(ResourceType = typeof(Custom.Resource), Name="Stop Pct", Order=9, GroupName="NinjaScriptStrategyParameters")]
+		public int StopPct
+		{ get; set; }
+		
+		[NinjaScriptProperty]
+		[Range(1, int.MaxValue)]
+		[Display(ResourceType = typeof(Custom.Resource), Name="Exit After Bars", Order=10, GroupName="NinjaScriptStrategyParameters")]
+		public int ExitAfterBArs
+		{ get; set; }
+		
 		#endregion
 
 	}
