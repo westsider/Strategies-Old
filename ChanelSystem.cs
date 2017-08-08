@@ -242,7 +242,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		/// make discrete
 		protected void exitAfterNBars(int bars, bool active)
 		{
-			
+			if ( !active ) { return; }
 			if ( Position.MarketPosition == MarketPosition.Long ) {
 				/// Stop after n Bars
 				Draw.Text(this, "TIME1c"+CurrentBar, entryBar.ToString(), 0, High[0], Brushes.White);
