@@ -26,7 +26,7 @@ using NinjaTrader.NinjaScript.DrawingTools;
 
 namespace NinjaTrader.NinjaScript.Strategies
 {
-	public class ChanelSystem : Strategy
+	public class Overraction : Strategy
 	{
 		
 		public double 	entryPrice;
@@ -66,7 +66,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if (State == State.SetDefaults)
 			{
 				Description									= @"Enter the description for your new custom Strategy here.";
-				Name										= "Channel System";
+				Name										= "Overreaction System";
 				Calculate									= Calculate.OnBarClose;
 				EntriesPerDirection							= 2;
 				///EntryHandling								= EntryHandling.AllEntries;
@@ -138,12 +138,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 		
 		/// Advanced: use the word market model to but the strongest index
 		/* Optional: 
-		1. Windfall profit exit: if you a 5% gain in a position, 
-		either cash it or tighten your trailing stop to 1% trailing stop. 
-		reduce volatility, you could elect to take only the US index signals. 
-		2. To reduce volatility, you could elect to not take signals when price is within 2% of the index’s 200 day MA. 
-		3. To try for more profits, you could elect to trail successful trades with a 1x ATR% trailing stop or 3% trailing stop 
-		and try to convert this trade into a longer term trend following position.
+		10. Optional decisions/rules: 
+		a. For broad US indices (DIA, SPY, QQQQ, MDY, IWM): use a 3% initial capital preservation stop loss. Use a trailing stop. b. For Semiconductors (IGW) and international indices use a 5% initial capital preservation stop loss. Use a trailing stop. c. Windfall profit exit: if you a 5% gain in a position, either cash it or tighten your trailing stop to 1% trailing stop. d. Time exit: exit at the open of the 8th day if you are still in the trade and no other exit has been triggered. e. To reduce volatility, you could elect to take only the US index signals f. To reduce volatility, you could elect to take long-only signals g. To operate within a retirement account, you could employ Powershares inverse ETFs to go long on inverse ETFs and actually be taking a short side position. h. To reduce volatility, you could elect to not take signals when price is within 2% of the index’s 200 day MA, since there is more whipsawing when the long term trend is not fully established. i. To reduce high tech exposure you could elect to not take IGW signals when you get both QQQQ and IGW signals on the same day j. To try for more profits, you could elect to trail successful trades with a 1x ATR% trailing stop or 3% trailing stop and try to convert this trade into a longer term trend following position.
 		*/
 
 		protected int calcPositionSize() {
@@ -178,10 +174,16 @@ namespace NinjaTrader.NinjaScript.Strategies
 			return signal;
 		}
 		
+		///  Close > 200SMA
+		/// High < 10sma
+		/// Close < 1% of 10sma or close < 1 ATR(14) below 10sma
 		protected bool entryConditions()
 		{
 			bool signal = false;
-			if ( Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && WilliamsR(10)[0] < -80 ){
+			double onePercent = Close[0] * 0.01;
+			if ((Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- ATR(14)[0])) ||
+				(Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- onePercent )) 
+				){
 				signal = true;
 				BarBrush = Brushes.Cyan;
 				CandleOutlineBrush = Brushes.Cyan;
