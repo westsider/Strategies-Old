@@ -35,41 +35,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 		public	int 	priorTradesCount;
 		public	double 	sharesFraction;
 		
-//		protected override void OnStateChange()
-//		{
-//			if (State == State.SetDefaults)
-//			{
-//				Description									= @"Custom Class To Calculate Position Sizes";
-//				Name										= "PositionSizer";
-//				Calculate									= Calculate.OnBarClose;
-//				EntriesPerDirection							= 1;
-//				EntryHandling								= EntryHandling.AllEntries;
-//				IsExitOnSessionCloseStrategy				= true;
-//				ExitOnSessionCloseSeconds					= 30;
-//				IsFillLimitOnTouch							= false;
-//				MaximumBarsLookBack							= MaximumBarsLookBack.TwoHundredFiftySix;
-//				OrderFillResolution							= OrderFillResolution.Standard;
-//				Slippage									= 0;
-//				StartBehavior								= StartBehavior.WaitUntilFlat;
-//				TimeInForce									= TimeInForce.Gtc;
-//				TraceOrders									= false;
-//				RealtimeErrorHandling						= RealtimeErrorHandling.StopCancelClose;
-//				StopTargetHandling							= StopTargetHandling.PerEntryExecution;
-//				BarsRequiredToTrade							= 20;
-//				// Disable this property for performance gains in Strategy Analyzer optimizations
-//				// See the Help Guide for additional information
-//				IsInstantiatedOnEachOptimizationIteration	= true;
-//			}
-//			else if (State == State.Configure)
-//			{
-//			}
-//		}
-
-//		protected override void OnBarUpdate()
-//		{
-//			//Add your custom strategy logic here.
-//		}
-		
 		/// <summary>
 		/// Caksulate the positions size given portfolio size and number of strategies
 		/// </summary>
