@@ -32,11 +32,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 		public double 	entryPrice;
 		public int 		entryBar;
 		public int 		entryBar2;
-		
 		public bool 	entryOne	 	= false;
 		public bool 	entryTwo 		= false;
-		//public bool 	inEntry2		= false;
-		
 		public string 	ComputerName	= "MBP";
 		///  money management
 		public double 	shares;
@@ -59,12 +56,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private SMA		sma0;
 		
 		///  reporting
-		private double  gainInPoints; 
-			
+		private double gainInPoints; 
 		private	double riskInLastTrade; 
-			
 		private	double rValue; 
-		
 		private	double totalR; 
 		
 		protected override void OnStateChange()
@@ -137,9 +131,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 			
 			setSecondEntry(stopPct: StopPct);
 			
+			/// TODO: assemble composite of 10 464k 67% pf 178 qqq HAD 10K LOSS because stops not in market
 			/// TODO: save file as stream
-			/// TODO: stop is triggered next  bar and that can cost alot
-			/// reserch how to get stops in the market
+			/// TODO: stopmarket now working, write routine to record the trade.
+			
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -310,13 +305,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if ( Position.MarketPosition == MarketPosition.Long ){
 				Draw.Text(this, "EL"+CurrentBar, "-", 0, entryPrice, Brushes.LimeGreen);
 				Draw.Text(this, "sL"+CurrentBar, "-", 0, stopLine, Brushes.Crimson);
+				ExitLongStopMarket(stopLine);
 			}
-			/// exit trade
-			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < stopLine ) {
-				ExitLong("Stop", "");
-				resetEntry();
-				tradeUpdate(tradeType: " LX_Stop on "+Instrument.MasterInstrument.Name);
-			}
+//			/// exit trade
+//			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < stopLine ) {
+//				ExitLong("Stop", "");
+//				resetEntry();
+//				tradeUpdate(tradeType: " LX_Stop on "+Instrument.MasterInstrument.Name);
+//			}
 		}
 		
 		/// trail stopadjusted for close > close[1]
