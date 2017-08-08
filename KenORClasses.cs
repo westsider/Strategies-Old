@@ -29,10 +29,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 	
 	public class KenORClasses : Strategy
 	{
-		/// instantiat pos size object
-		private PositionSize positionSize = new PositionSize();
-		//private Foo foo = new Foo();
-		
+		private PositionSizer positionSize = new PositionSizer();
+
 		///  Entry Vars
 		public double 	entryPrice;
 		public int 		entryBar;
@@ -40,15 +38,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 		public bool 	entryOne	 	= false;
 		public bool 	entryTwo 		= false;
 		public string 	ComputerName	= "MBP";
-		///  money management
-		//public double 	shares;
-		//public int  	portfolioSize	= 826000;
-		//public int		numSystems		= 10;
-		//private int 	initialBalance;
-		//private	int 	cashAvailiable;
-		//private	double 	priorTradesCumProfit;
-		//private	int 	priorTradesCount;
-		//private	double 	sharesFraction;
 		
 		/// stops
 		private double 	stopLine;
@@ -590,50 +579,4 @@ namespace NinjaTrader.NinjaScript.Strategies
 		#endregion
 
 	}
-}
-
-namespace NinjaTrader.NinjaScript.Strategies
-{
-//     public class Foo
-//     {
-//          public bool bar(int num)
-//          {
-//               return num > 0 ? true : false;	
-//          }
-//     }
-
-     public class PositionSize 
-     {
-		 ///  money management
-		public double 	shares;
-		public int 	initialBalance;
-		public	int 	cashAvailiable;
-		public	double 	priorTradesCumProfit;
-		public	int 	priorTradesCount;
-		public	double 	sharesFraction;
-		/// <summary>
-		/// Caksulate the positions size given portfolio size and number of strategies
-		/// </summary>
-		/// <param name="theClose"></param>
-		/// <param name="totalProfit"></param>
-		/// <returns></returns>
-		public int calcPositionSizes(double theClose, double totalProfit, int systems, int capital) {
-			/// d. Maximum 20% of capital in any single index , Maximum 10 positions 
-			/// e. Buy in equal dollar amounts
-			/// c. Maximum 10% of capital in any single position 
-			/// Store the strategy's prior cumulated realized profit and number of trades
-			priorTradesCumProfit = totalProfit;	//SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit;
-			/// cal initialBalance s portion  of portfoli / num systems
-			initialBalance = capital / systems ;
-			/// Adjust position size for profit and loss
-			cashAvailiable = initialBalance + (int)priorTradesCumProfit;
-			/// calc positionsize
-			sharesFraction = cashAvailiable / theClose; // Close[0]
-			return (int)sharesFraction;
-		}
-		public bool IsGreaterThanZero(int num)
-		{
-		   return num > 0 ? true : false;	
-		}
-     }
 }
