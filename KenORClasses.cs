@@ -26,9 +26,14 @@ using NinjaTrader.NinjaScript.DrawingTools;
 
 namespace NinjaTrader.NinjaScript.Strategies
 {
-	public class Overraction : Strategy
+	
+	public class KenORClasses : Strategy
 	{
+		/// instantiat pos size object
+		private PositionSize positionSize = new PositionSize();
+		//private Foo foo = new Foo();
 		
+		///  Entry Vars
 		public double 	entryPrice;
 		public int 		entryBar;
 		public int 		entryBar2;
@@ -36,14 +41,14 @@ namespace NinjaTrader.NinjaScript.Strategies
 		public bool 	entryTwo 		= false;
 		public string 	ComputerName	= "MBP";
 		///  money management
-		public double 	shares;
-		public int  	portfolioSize	= 826000;
-		public int		numSystems		= 10;
-		private int 	initialBalance;
-		private	int 	cashAvailiable;
-		private	double 	priorTradesCumProfit;
-		private	int 	priorTradesCount;
-		private	double 	sharesFraction;
+		//public double 	shares;
+		//public int  	portfolioSize	= 826000;
+		//public int		numSystems		= 10;
+		//private int 	initialBalance;
+		//private	int 	cashAvailiable;
+		//private	double 	priorTradesCumProfit;
+		//private	int 	priorTradesCount;
+		//private	double 	sharesFraction;
 		
 		/// stops
 		private double 	stopLine;
@@ -66,7 +71,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			if (State == State.SetDefaults)
 			{
 				Description									= @"Enter the description for your new custom Strategy here.";
-				Name										= "Overreaction System";
+				Name										= "Ken OR Classes";
 				Calculate									= Calculate.OnBarClose;
 				EntriesPerDirection							= 2;
 				///EntryHandling								= EntryHandling.AllEntries;
@@ -103,6 +108,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			{
 				AddChartIndicator(MarketCondition(showBands: false, showVolatilityText: false));
 				//SetStopLoss(CalculationMode.Currency, 3129);
+				
 			}
 			else if (State == State.DataLoaded)
 			{
@@ -150,21 +156,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 		10. Optional decisions/rules: 
 		a. For broad US indices (DIA, SPY, QQQQ, MDY, IWM): use a 3% initial capital preservation stop loss. Use a trailing stop. b. For Semiconductors (IGW) and international indices use a 5% initial capital preservation stop loss. Use a trailing stop. c. Windfall profit exit: if you a 5% gain in a position, either cash it or tighten your trailing stop to 1% trailing stop. d. Time exit: exit at the open of the 8th day if you are still in the trade and no other exit has been triggered. e. To reduce volatility, you could elect to take only the US index signals f. To reduce volatility, you could elect to take long-only signals g. To operate within a retirement account, you could employ Powershares inverse ETFs to go long on inverse ETFs and actually be taking a short side position. h. To reduce volatility, you could elect to not take signals when price is within 2% of the index’s 200 day MA, since there is more whipsawing when the long term trend is not fully established. i. To reduce high tech exposure you could elect to not take IGW signals when you get both QQQQ and IGW signals on the same day j. To try for more profits, you could elect to trail successful trades with a 1x ATR% trailing stop or 3% trailing stop and try to convert this trade into a longer term trend following position.
 		*/
-
-		protected int calcPositionSize() {
-			/// d. Maximum 20% of capital in any single index , Maximum 10 positions 
-			/// e. Buy in equal dollar amounts
-			/// c. Maximum 10% of capital in any single position 
-			/// Store the strategy's prior cumulated realized profit and number of trades
-			priorTradesCumProfit = SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit;
-			/// cal initialBalance s portion  of portfoli / num systems
-			initialBalance = portfolioSize / numSystems ;
-			/// Adjust position size for profit and loss
-			cashAvailiable = initialBalance + (int)priorTradesCumProfit;
-			/// calc positionsize
-			sharesFraction = cashAvailiable / Close[0];
-			return (int)sharesFraction;
-		}
 		
 		protected bool setMarketConditionFilter(bool isOn) {
 			bool signal = false;
@@ -203,6 +194,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		///--------------------------->	Long Entry	<-----------------------------------------------
 		protected bool entryConditions()
 		{
+			
 			bool signal = false;
 			double onePercent = Close[0] * 0.01;
 			if ((Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- ATR(14)[0])) ||
@@ -217,23 +209,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 		protected void setLongSentry(int stopPct, bool marketCond) {
 			/// Entry #1
 			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() && setMarketConditionFilter( isOn: marketCond ) ) {
-				shares = calcPositionSize();
-				EnterLong(Convert.ToInt32(shares), "LE 1");
+				positionSize.shares = positionSize.calcPositionSizes(
+					theClose: Close[0], 
+					totalProfit: SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit,
+					systems: NumberOfSystems,
+					capital: StartingCapital
+				); 
+				
+				EnterLong(Convert.ToInt32(positionSize.shares), "LE 1");
 				entryPrice = Close[0];
 				entryBar = 1;
 				entryOne = true;
-				string entryData = "------->  LE on " +Instrument.MasterInstrument.Name + " shares " + shares + "  $" + cashAvailiable;
+				string entryData = "------->  LE on " +Instrument.MasterInstrument.Name + " shares " + positionSize.shares + "  $" + positionSize.cashAvailiable;
 				Print(entryData);
 				
-				string entryTxt = "LE 1\n" + shares+" shares" + "\n$"+cashAvailiable.ToString("0");
+				string entryTxt = "LE 1\n" + positionSize.shares+" shares" + "\n$"+positionSize.cashAvailiable.ToString("0");
 				
 				calcInitialStop(pct: stopPct);
 				// calc hard stop loss in $$$
 				/// entryPrice - stopline * shares
 				// show loss at stop line
 				lossInPonts =  ( stopLine - entryPrice );
-				double lossInTrade = shares * lossInPonts;
-				double lossInPct  = lossInTrade / cashAvailiable;
+				double lossInTrade = positionSize.shares * lossInPonts;
+				double lossInPct  = lossInTrade / positionSize.cashAvailiable;
 				string traderLossStats = "\t$" + lossInTrade.ToString("0") + "\t%" +lossInPct.ToString("0.00") ; //lossInPonts.ToString("0.00") + 
 				Draw.Text(this, "loss"+CurrentBar, traderLossStats, 0, stopLine - (TickSize* 40), Brushes.Crimson);
 			}
@@ -242,7 +240,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		/// MARK: - TODO Entry #2
 		protected void setSecondEntry(int stopPct) {
 			if (Position.MarketPosition == MarketPosition.Long && entryConditions() && SecondSignal && !entryTwo ) {
-				EnterLong(Convert.ToInt32(shares), "LE 2");
+				EnterLong(Convert.ToInt32(positionSize.shares), "LE 2");
 				entryBar2 = 1;
 				entryTwo = true;
 			}
@@ -265,23 +263,29 @@ namespace NinjaTrader.NinjaScript.Strategies
 		protected void setShortEntry(int stopPct, bool marketCond) {
 			/// Entry #1
 			if ( Position.MarketPosition == MarketPosition.Flat && entryConditionsShort() && setMarketConditionFilterShort( isOn: marketCond ) ) {
-				shares = calcPositionSize();
-				EnterShort(Convert.ToInt32(shares), "ORs 1");
+				positionSize.shares = positionSize.calcPositionSizes(
+					theClose: Close[0], 
+					totalProfit: SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit,
+					systems: NumberOfSystems,
+					capital: StartingCapital
+				); 
+				
+				EnterShort(Convert.ToInt32(positionSize.shares), "ORs 1");
 				entryPrice = Close[0];
 				entryBar = 1;
 				entryOne = true;
-				string entryData = "------->  SE on " +Instrument.MasterInstrument.Name + " shares " + shares + "  $" + cashAvailiable;
+				string entryData = "------->  SE on " +Instrument.MasterInstrument.Name + " shares " + positionSize.shares + "  $" + positionSize.cashAvailiable;
 				Print(entryData);
 				
-				string entryTxt = "ORs 1\n" + shares+" shares" + "\n$"+cashAvailiable.ToString("0");
+				string entryTxt = "ORs 1\n" + positionSize.shares+" shares" + "\n$"+positionSize.cashAvailiable.ToString("0");
 				
 				calcInitialStopShort(pct: stopPct);
 				// calc hard stop loss in $$$
 				/// entryPrice - stopline * shares
 				// show loss at stop line
 				lossInPonts =  ( stopLine - entryPrice );
-				double lossInTrade = shares * lossInPonts;
-				double lossInPct  = lossInTrade / cashAvailiable;
+				double lossInTrade = positionSize.shares * lossInPonts;
+				double lossInPct  = lossInTrade / positionSize.cashAvailiable;
 				string traderLossStats = "\t$" + lossInTrade.ToString("0") + "\t%" +lossInPct.ToString("0.00"); //lossInPonts.ToString("0.00") +
 				Draw.Text(this, "loss"+CurrentBar, traderLossStats, 0, stopLine + (TickSize* 40), Brushes.Crimson);
 			}
@@ -385,7 +389,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		protected void exitOnTrailStop(bool isOn) {
 			if ( !isOn ) { return; }
 			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < trailStop ) {
-				ExitLong(Convert.ToInt32(shares));
+				ExitLong(Convert.ToInt32(positionSize.shares));
 				resetEntry();
 				tradeUpdate(tradeType: " LX_Trail on "+Instrument.MasterInstrument.Name);
 				Draw.Text(this, "LX_Trail"+CurrentBar, "LX_Trail", 0, Low[0]- (TickSize * 40), Brushes.Crimson);
@@ -498,7 +502,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 					winPct = winPct * 100;		
 			}
 	
-			double roi = ( priorTradesCumProfit / initialBalance ) * 100;
+			double roi = ( positionSize.priorTradesCumProfit / positionSize.initialBalance ) * 100;
 			
 			string bodyMessage = "\n\t";
 			bodyMessage = bodyMessage +SystemPerformance.AllTrades.TradesPerformance.TradesCount.ToString("0")+" Trades";
@@ -586,4 +590,50 @@ namespace NinjaTrader.NinjaScript.Strategies
 		#endregion
 
 	}
+}
+
+namespace NinjaTrader.NinjaScript.Strategies
+{
+//     public class Foo
+//     {
+//          public bool bar(int num)
+//          {
+//               return num > 0 ? true : false;	
+//          }
+//     }
+
+     public class PositionSize 
+     {
+		 ///  money management
+		public double 	shares;
+		public int 	initialBalance;
+		public	int 	cashAvailiable;
+		public	double 	priorTradesCumProfit;
+		public	int 	priorTradesCount;
+		public	double 	sharesFraction;
+		/// <summary>
+		/// Caksulate the positions size given portfolio size and number of strategies
+		/// </summary>
+		/// <param name="theClose"></param>
+		/// <param name="totalProfit"></param>
+		/// <returns></returns>
+		public int calcPositionSizes(double theClose, double totalProfit, int systems, int capital) {
+			/// d. Maximum 20% of capital in any single index , Maximum 10 positions 
+			/// e. Buy in equal dollar amounts
+			/// c. Maximum 10% of capital in any single position 
+			/// Store the strategy's prior cumulated realized profit and number of trades
+			priorTradesCumProfit = totalProfit;	//SystemPerformance.AllTrades.TradesPerformance.Currency.CumProfit;
+			/// cal initialBalance s portion  of portfoli / num systems
+			initialBalance = capital / systems ;
+			/// Adjust position size for profit and loss
+			cashAvailiable = initialBalance + (int)priorTradesCumProfit;
+			/// calc positionsize
+			sharesFraction = cashAvailiable / theClose; // Close[0]
+			return (int)sharesFraction;
+		}
+		public bool IsGreaterThanZero(int num)
+		{
+		   return num > 0 ? true : false;	
+		}
+     }
 }
