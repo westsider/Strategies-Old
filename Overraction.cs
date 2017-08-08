@@ -174,7 +174,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			return signal;
 		}
 		
-		///  Close > 200SMA
+		/// Close > 200SMA
 		/// High < 10sma
 		/// Close < 1% of 10sma or close < 1 ATR(14) below 10sma
 		protected bool entryConditions()
@@ -182,8 +182,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			bool signal = false;
 			double onePercent = Close[0] * 0.01;
 			if ((Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- ATR(14)[0])) ||
-				(Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- onePercent )) 
-				){
+				(Close[0] > Math.Abs(sma0[0])  && High[0] < SMA(10)[0] && Close[0] < ( SMA(10)[0]- onePercent )) ){
 				signal = true;
 				BarBrush = Brushes.Cyan;
 				CandleOutlineBrush = Brushes.Cyan;
@@ -195,8 +194,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 			/// Entry #1
 			if ( Position.MarketPosition == MarketPosition.Flat && entryConditions() && setMarketConditionFilter( isOn: marketCond ) ) {
 				shares = calcPositionSize();
-				/// EnterLong(Convert.ToInt32(shares), "");
-				/// changed for unique
 				EnterLong(Convert.ToInt32(shares), "LE 1");
 				entryPrice = Close[0];
 				entryBar = 1;
@@ -205,7 +202,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Print(entryData);
 				
 				string entryTxt = "LE 1\n" + shares+" shares" + "\n$"+cashAvailiable.ToString("0");
-				//Draw.Text(this, "Cash"+CurrentBar, entryTxt, 0, MIN(Low, 10)[0] - (TickSize* 40), Brushes.LimeGreen);
 				
 				calcInitialStop(pct: stopPct);
 				// calc hard stop loss in $$$
@@ -222,26 +218,22 @@ namespace NinjaTrader.NinjaScript.Strategies
 		/// MARK: - TODO Entry #2
 		protected void setSecondEntry(int stopPct) {
 			if (Position.MarketPosition == MarketPosition.Long && entryConditions() && SecondSignal && !entryTwo ) {
-				///EnterLong(Convert.ToInt32(shares), "");
-				/// changed for unique
 				EnterLong(Convert.ToInt32(shares), "LE 2");
 				entryBar2 = 1;
 				entryTwo = true;
-				//Draw.Text(this, "LE_2"+CurrentBar, "LE_2", 0, Low[0]- (TickSize * 40), Brushes.Lime);
 			}
 		}
-		
+
+		/// RSI Target does better
 		protected void setLongTarget() {
 			/// %R Target
-			if ( Position.MarketPosition == MarketPosition.Long && WilliamsR(10)[0] > -30 ) {
-				ExitLong("LX RSI", "");
+			if ( Position.MarketPosition == MarketPosition.Long && Close[0] > SMA(10)[0] ) {
+				ExitLong("LX SMA", "");
 				resetEntry();
 				tradeUpdate(tradeType: " LX_Target on "+Instrument.MasterInstrument.Name);
 			}
 		}
 		
-		///  exit  N Bars
-		/// make discrete
 		protected void exitAfterNBars(int bars, bool active)
 		{
 			
@@ -308,12 +300,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Draw.Text(this, "sL"+CurrentBar, "-", 0, stopLine, Brushes.Crimson);
 				ExitLongStopMarket(stopLine);
 			}
-//			/// exit trade
-//			if ( Position.MarketPosition == MarketPosition.Long && Close[0] < stopLine ) {
-//				ExitLong("Stop", "");
-//				resetEntry();
-//				tradeUpdate(tradeType: " LX_Stop on "+Instrument.MasterInstrument.Name);
-//			}
 		}
 		
 		/// trail stopadjusted for close > close[1]
