@@ -158,7 +158,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			setSecondEntryShort(stopPct: StopPct);
 	
 			/// TODO: save file as stream
-			/// TODO: stopmarket now working, write routine to record the trades from the order state function
+			/// TODO: no stop on entry bar
 		}
 		
 		/// Advanced: use the word market model to but the strongest index
@@ -213,6 +213,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			bool signal = false;
 			if (isOn) {
 				int conditionNumber =MarketCondition(showBands: false, showVolatilityText: false).MarketCond[0];
+				// Console.WriteLine($"Full name - {person.firstName} {person.lastName}");
 				Print("\tMarket Cindition is on\t" + conditionNumber);
 				///if 1 2 3 6
 				if ( conditionNumber != 0 && ( conditionNumber < 4 || conditionNumber == 6 )) {
@@ -298,7 +299,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		
 		/// Entry #2
 		protected void setSecondEntry(int stopPct) {
-			if (Position.MarketPosition == MarketPosition.Long && entryConditions() && SecondSignal && !entryTwo ) {
+			if (Position.MarketPosition == MarketPosition.Long && entryConditions() && SecondSignal && !entryTwo && Close[0] > stopLine) {
 				EnterLong(Convert.ToInt32(shares), "LE 2");
 				entryBar2 = 1;
 				entryTwo = true;
@@ -360,8 +361,8 @@ namespace NinjaTrader.NinjaScript.Strategies
 		
 		/// Entry #2 Short
 		protected void setSecondEntryShort(int stopPct) {
-			if (Position.MarketPosition == MarketPosition.Short && entryConditionsShort() && SecondSignal && !entryTwoShort ) {
-				EnterShort(Convert.ToInt32(shares), "LE 2");
+			if (Position.MarketPosition == MarketPosition.Short && entryConditionsShort() && SecondSignal && !entryTwoShort && Close[0] < stopLine) {
+				EnterShort(Convert.ToInt32(shares), "SE 2");
 				entryBar2short = 1;
 				entryTwoShort = true;
 			}
@@ -543,7 +544,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				Draw.Text(this, "sS"+CurrentBar, "-", 0, stopLine, Brushes.Crimson);
 				/// git this to work but dicey
 				/// limit, stop -- reduce limit by 3 cents
-				ExitShortStopLimit(stopLine+0.02, stopLine,"stop", "ORs 1");
+				ExitShortStopLimit(stopLine+0.02, stopLine,"stop", "");
 			}
 		}
 		
