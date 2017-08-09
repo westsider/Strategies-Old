@@ -145,12 +145,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 			setLongTarget();
 			setShortTarget();
 			
-			/// Fixed Short Stop Limit, by adding a limit 2 cents above
-			/// does not work on entry bar -- need to research further
 			setInitialStop(pct: StopPct, auto: AutoSetStopFromMarket);
 			setInitialStopShort(pct: StopPct, auto: AutoSetStopFromMarket);
 			
-			exitAfterNBars(bars: ExitAfterBArs, active: ExitAfterNbars);  // minor differece
+			exitAfterNBars(bars: ExitAfterBArs, active: ExitAfterNbars); 
 			
 			setTrailOnClose(isOn: UseTrailStop);
 			/// stats in GUI
@@ -159,8 +157,9 @@ namespace NinjaTrader.NinjaScript.Strategies
 			setSecondEntry(stopPct: StopPct);
 			setSecondEntryShort(stopPct: StopPct);
 	
-			/// TODO: save file as stream
-			/// TODO: no stop on entry bar
+			/// TODO: Save file as stream
+			/// TODO: Open Profit > 5%
+		
 		}
 		
 		protected override void OnOrderUpdate(Cbi.Order order, double limitPrice, double stopPrice,
@@ -169,23 +168,18 @@ namespace NinjaTrader.NinjaScript.Strategies
 		{
 		  //Print("The most current order state is: " + order.OrderState);   // OrderState.PartFilled
 		  //Print("This particular order update state is: " + orderState); // OrderState.Working
-			if( filled != null && order.Name == "ORs 1" ) {
+			if( filled != null && ( order.Name == "ORs 1" || order.Name == "ORs 2" )  ) {
 				Print(order);
 				Print("This particular order update state is: " + filled +"\t"+ order.OrderType+"\t"+ order.Name ); // OrderState.Working
-				//ExitShortStopLimit(stopLine+0.02, stopLine,"stop", "");
 				setInitialStopShort(pct: StopPct, auto: AutoSetStopFromMarket);
 			}
 			
+			if( filled != null && ( order.Name == "OR 1" || order.Name == "OR 2" )  ) {
+				Print(order);
+				Print("This particular order update state is: " + filled +"\t"+ order.OrderType+"\t"+ order.Name ); // OrderState.Working
+				setInitialStop(pct: StopPct, auto: AutoSetStopFromMarket);
+			}
 			
-//		  if (entryOrder != null && entryOrder == order)
-//		  {
-//			  Print("*** This is the entryOrder: "+entryOrder);
-//		  }
-//		  /// if entry order exists
-//			if (order.Name == "SE 1") {
-//      			entryOrder = order;
-//			 	Print("\n\t-------->\tHello Short ordey:\t"+order.ToString());
-//			}
 		}
 		/// Advanced: use the word market model to but the strongest index
 		/* Optional: 
