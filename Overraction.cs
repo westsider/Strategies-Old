@@ -155,6 +155,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			setTextBox(textInBox: popuateStatsTextBox());
 			
 			setSecondEntry(stopPct: StopPct);
+			setSecondEntryShort(stopPct: StopPct);
 	
 			/// TODO: save file as stream
 			/// TODO: stopmarket now working, write routine to record the trades from the order state function
