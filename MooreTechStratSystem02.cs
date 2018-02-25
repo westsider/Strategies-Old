@@ -62,6 +62,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				StopTargetHandling							= StopTargetHandling.PerEntryExecution;
 				BarsRequiredToTrade							= 20;
 				DisconnectDelaySeconds 						= 120;
+				//Enabled 									= true;
 				// Disable this property for performance gains in Strategy Analyzer optimizations
 				// See the Help Guide for additional information
 				IsInstantiatedOnEachOptimizationIteration	= false;
@@ -83,9 +84,11 @@ namespace NinjaTrader.NinjaScript.Strategies
 				ComputerName			= "MBP";
 				Path					= @"C:\Users\MBPtrader\Documents\NT_CSV\connected.csv";
 				//Path					=  @"C:\Users\Administrator\Documents\connected.csv";
+				
 			}
 			else if (State == State.Configure)
 			{
+				
 			}
 			else if (State == State.DataLoaded)
 			{				
