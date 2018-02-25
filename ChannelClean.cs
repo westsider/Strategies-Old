@@ -114,7 +114,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 			extendedTarget();
  			// Print out the number of long trades
     		
-			createCSV(debug: true);
+			createCSV(debug: false);
 			
 			
 		}
@@ -175,7 +175,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
 			using (StreamWriter writer = new StreamWriter(filePath, true))
 			{
-				/// Trade Count, Date In, Date Out, Ticker, lastProfitCurrency, cumProfit, exit name, profit factor, winPce Consecutive losers, largest loser, largest winner, profit per month
+				/// Trade Count, Date In, Date Out, Ticker, lastProfitCurrency, cumProfit, exit name, profit factor, winPct Consecutive losers, largest loser, largest winner, profit per month
 				var newLine =  tradeCount + ", " + 
 					entryDate + ", " + exitDate + ", " +
 					Instrument.MasterInstrument.Name + ", " + lastTrade.ProfitCurrency.ToString("0.0") + ", " + cumProfit + ", " + 
