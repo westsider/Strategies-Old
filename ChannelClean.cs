@@ -22,6 +22,9 @@ using NinjaTrader.NinjaScript.Indicators;
 using NinjaTrader.NinjaScript.DrawingTools;
 using System.IO;
 using System.Windows.Forms;
+using System.Net;
+using System.Net.Cache;
+using System.Web.Script.Serialization;
 #endregion
 
 //This namespace holds Strategies in this folder and is required. Do not change it. 
@@ -37,6 +40,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		
 		///  money management
 		public double 	shares;
+		public double 	cost;
 		private int 	initialBalance;
 		private	int 	cashAvailiable;
 		private	double 	priorTradesCumProfit;
@@ -51,12 +55,24 @@ namespace NinjaTrader.NinjaScript.Strategies
 		private double  entryBarnum;
 		private double  stopDistance;
 		private int 	tradeCount;
-		
 		private bool SavedCSVtoday = false;
 		
-		private string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+		/// struct for firebase
+		private struct PriceData
+		{
+			public  string 	date 	{ get; set; }
+			public  string 	ticker 	{ get; set; }
+			public	double 	profit	{ get; set; }
+			public	double 	winPct 	{ get; set; }
+			public	double 	cost		{ get; set; }
+			public  double 	roi	{ get; set; }
+		}
+		private PriceData priceData = new PriceData{};
+		private List<PriceData> myList = new List<PriceData>();
 		
+		private string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 		NinjaTrader.NinjaScript.PerformanceMetrics.SampleCumProfit myProfit;
+		
 		
 		protected override void OnStateChange()
 		{
@@ -101,7 +117,6 @@ namespace NinjaTrader.NinjaScript.Strategies
 			  }
 		}
 
-
 		protected override void OnBarUpdate()
 		{
 			if (CurrentBar < 20 ) { return; }
@@ -112,12 +127,83 @@ namespace NinjaTrader.NinjaScript.Strategies
 			percentRexit();
 			setTrailStop();
 			extendedTarget();
- 			// Print out the number of long trades
-    		
-			createCSV(debug: false);
-			
-			
+			createCSV(isOn: false, debug: false);
+			pushToFirebase(isOn: ShowText, debug: false);  // showtext now firebase switch
 		}
+		
+		/// ////////////////////////////////////////////////////////////////////////////////////////////////
+		/// 	
+		/// 									push to firebase
+		/// 
+		/// ////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		private void pushToFirebase(bool isOn, bool debug) {
+			if ( !isOn ) {
+				return;
+			}
+			
+			if ( tradeCount != SystemPerformance.AllTrades.Count )
+			  {
+				  tradeCount = SystemPerformance.AllTrades.Count;
+			      Trade lastTrade = SystemPerformance.AllTrades[SystemPerformance.AllTrades.Count - 1];
+				  var exitName = lastTrade.Exit.Name.ToString();
+				  var entryDate = lastTrade.Entry.Time.ToShortDateString();
+				  //var exitDate = lastTrade.Exit.Time.ToShortDateString();
+				  var cumProfit = SystemPerformance.AllTrades.TradesPerformance.NetProfit.ToString("0.0");
+				  var profitFactor = SystemPerformance.AllTrades.TradesPerformance.ProfitFactor.ToString("0.00");
+				  var roi = lastTrade.ProfitCurrency / cost;
+				  //var MaxConsecutiveLoser = SystemPerformance.AllTrades.TradesPerformance.MaxConsecutiveLoser;
+				  //var LargestLoser =  SystemPerformance.AllTrades.TradesPerformance.Currency.LargestLoser.ToString("0.0");
+				  //var LargestWinner =  SystemPerformance.AllTrades.TradesPerformance.Currency.LargestWinner.ToString("0.0");
+				  //var ProfitPerMonth =  SystemPerformance.AllTrades.TradesPerformance.Currency.ProfitPerMonth.ToString("0.0");
+				  double winPct = (Convert.ToDouble( SystemPerformance.AllTrades.WinningTrades.Count) / Convert.ToDouble(SystemPerformance.AllTrades.TradesPerformance.TradesCount));
+				  winPct = winPct * 100;
+				  
+				  if ( debug ) {
+				      Print( tradeCount + 
+					  "\t\tEntry: " + entryDate +  
+					  "\t\tProfit: " + lastTrade.ProfitCurrency.ToString("0.0") + "\t\tTotal " + cumProfit + "\t\t exit Type" + exitName +
+					 "\t\tWin Percent " + winPct.ToString("0.0") + "%" + "\t\tPF " + profitFactor); // +
+					 // "\t\tMax LR " + MaxConsecutiveLoser + "\t\tLL " + LargestLoser + "\t\tLW " + LargestWinner + "\t\tMonthly " + ProfitPerMonth);
+				  }
+
+				  /// update data
+					priceData.date 		=  	entryDate;
+					priceData.ticker	=	Instrument.MasterInstrument.Name;
+					priceData.profit	= 	Math.Abs(lastTrade.ProfitCurrency);
+					priceData.winPct	= 	Math.Abs(winPct);
+					priceData.cost 		= 	Math.Abs(cost);
+					priceData.roi		=	Math.Abs(roi);
+					
+				   Print(priceData.date + "\t" + priceData.ticker);
+				   deployFirebase(payload: priceData); // List<PriceData>
+			  }
+		}
+		
+		
+
+		
+		private void deployFirebase(PriceData payload) {
+			string jsonDataset = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(payload);
+			var myFirebase = "https://mtdash01.firebaseio.com/.json";
+            var request = WebRequest.CreateHttp(myFirebase);
+			request.Method = "POST";		// PUT writes over + POST - Pushing Data
+            byte[] byteArray = Encoding.UTF8.GetBytes(jsonDataset);
+            request.ContentType = "application/json";
+            request.ContentLength = byteArray.Length;
+			Stream dataStream = request.GetRequestStream();
+            dataStream.Write(byteArray, 0, byteArray.Length);
+            dataStream.Close();
+            WebResponse response = request.GetResponse();
+			dataStream = response.GetResponseStream();
+            StreamReader reader = new StreamReader(dataStream);
+            string responseFromServer = reader.ReadToEnd();
+			reader.Close();
+            dataStream.Close();
+            response.Close();
+            request.Abort();
+		}
+		
 		/// ////////////////////////////////////////////////////////////////////////////////////////////////
 		/// 	
 		/// 									CSV Export
@@ -140,7 +226,10 @@ namespace NinjaTrader.NinjaScript.Strategies
 			}
 		}
 		
-		private void createCSV(bool debug) {
+		private void createCSV(bool isOn, bool debug) {
+			if ( !isOn ) {
+				return;
+			}
 			
 			if ( tradeCount != SystemPerformance.AllTrades.Count )
 			  {
@@ -319,6 +408,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 				sharesFraction = MaxRisk / ( stopPrice - Close[0] );
 			}
 			//Print(sharesFraction);
+			cost = Close[0] *  (int)sharesFraction;
 			return (int)sharesFraction;
 		}
 		/// ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -367,7 +457,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 		{ get; set; }
 		
 		[NinjaScriptProperty]
-		[Display(Name="Indicator On", Description="is this thing on?", Order=1, GroupName="Parameters")]
+		[Display(Name="Push To Firebase", Description="is this thing on?", Order=1, GroupName="Parameters")]
 		public bool ShowText
 		{ get; set; }
 		#endregion
