@@ -170,12 +170,13 @@ namespace NinjaTrader.NinjaScript.Strategies
 				  /// update data
 					priceData.date 		=  	entryDate;
 					priceData.ticker	=	Instrument.MasterInstrument.Name;
-					priceData.profit	= 	Math.Abs(lastTrade.ProfitCurrency);
-					priceData.winPct	= 	Math.Abs(winPct);
-					priceData.cost 		= 	Math.Abs(cost);
-					priceData.roi		=	Math.Abs(roi);
+					priceData.profit	= 	Math.Round(lastTrade.ProfitCurrency, 2); 
+				  //Print();
+					priceData.winPct	= 	Math.Round(winPct, 2);
+					priceData.cost 		= 	Math.Round(cost);
+					priceData.roi		=	Math.Round(roi, 4);
 					
-				   Print(priceData.date + "\t" + priceData.ticker);
+				   if ( debug ) { Print(priceData.date + "\t" + priceData.ticker + "\tprofit: " + priceData.profit  + "\t\t%win: " + priceData.winPct  + "\t\tcost: " + priceData.cost + "\t\tROI: " + priceData.roi); }
 				   deployFirebase(payload: priceData); // List<PriceData>
 			  }
 		}
